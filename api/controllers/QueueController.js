@@ -8,6 +8,7 @@
 var create = require('sails/lib/hooks/blueprints/actions/create');
 var moment = require('moment');
 module.exports = {
+
    create: function(req, res) {
       req.options.values = {
        uploadedby:req.user.user,

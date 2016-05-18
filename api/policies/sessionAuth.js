@@ -8,18 +8,16 @@
  *
  */
 
-var needle = require('needle');
 module.exports = function(req, res, next) {
-
   var sid = req.param('sid');
-
-  needle.get('http://192.168.31.195:8080/api/method/flows.flows.controller.ephesoft_integration.get_user?sid=' + sid, {
-    compressed: true
-  }, function(error, response) {
-    if (!error && response.statusCode == 200) {
-      req.user = JSON.parse(response.body.message);
+  console.log(sid);
+  SessionVerify.VerifySession(sid)
+    .then(function(user) {
+      req.user = user;
       return next();
-    }
-    return res.forbidden('You are not permitted to perform this action.');
-  });
+    })
+    .catch(function(error) {
+      return res.forbidden('You are not permitted to perform this action.');
+    });
+
 };

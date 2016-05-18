@@ -10,15 +10,13 @@ import datetime
 
 
 
-
-def get_data_from_sails(self, start_date, end_date):
+def get_csv(start_date,end_date):
     connection = pymysql.connect(host='localhost',
-                                     port=3306,
-                                     user='root',
-                                     password='root',
-                                     db='demo'
-                                    )
-
+                                 port=3306,
+                                 user='root',
+                                 password='root',
+                                 db='demo'
+                                )
 
     erpconnection = pymysql.connect(host='127.0.0.1',
                                  port=3307,
@@ -28,6 +26,40 @@ def get_data_from_sails(self, start_date, end_date):
                                 )
 
     try:
+        sails_df = ''
+        erp_df = ''
+        con=[]
+        others=[]
+        indent_df = ''
+        with connection.cursor() as cursor:
+            # Create a new record
+            sql = """
+            select cno as name, doctype, status, account
+            from currentstat
+            where date between "{start_date}" and "{end_date}"
+            """.format(start_date=start_date, end_date=end_date)
+
+            cursor.execute(sql)
+            result = cursor.fetchall()
+            data = list(result)
+
+            for x in result:
+                if x[1] == "Consignment Note":
+                    con.append(x[0])
+                else:
+                    others.append(x[0])
+            df = pd.DataFrame(data)
+
+            if not result:
+                df.to_csv("/tmp/pandas.csv", index = False)
+                return
+
+            df.columns = [x[0] for x in cursor.description]
+            sails_df = df
+
+        # connection is not autocommit by default. So you must commit to save
+        # your changes.
+        connection.commit()
 
         with erpconnection.cursor() as cursor:
             # Create a new record
@@ -53,6 +85,7 @@ def get_data_from_sails(self, start_date, end_date):
             df.columns = [x[0] for x in cursor.description]
             df['doctype'] = "Consignment Note"
             erp_df = df
+            erp_df.to_csv("/tmp/erp.csv", index = False)
 
 
         with erpconnection.cursor() as cursor:
@@ -93,6 +126,7 @@ def get_data_from_sails(self, start_date, end_date):
             df.columns = [x[0] for x in cursor.description]
             df['doctype'] = "Indent Invoice"
             indent_df = df
+            indent_df.to_csv("/tmp/indent.csv", index = False)
 
 
         fully_merged = pd.merge(sails_df, indent_df.append(erp_df), on=['name','doctype'])

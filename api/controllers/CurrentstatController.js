@@ -15,24 +15,12 @@ var _ = require('underscore');
 
 module.exports = {
 
-
-    updateStatus: function(req, res) {
-    function mapSailsToErpDoctype(doctype, data) {
-      objToStore = {}
-      if (['VAT Form XII', 'Excise Invoice', 'Indent Invoice'].indexOf(doctype) > -1) {
-        objToStore.doctype = 'Indent Invoice';
-        objToStore.docname = data.bill_number;
-      } else if (['Consignment Note'].indexOf(doctype) > -1) {
-        objToStore.doctype = 'Sales Invoice';
-      }
-      return objToStore;
-    }
-
+  updateStatus: function(req, res) {
+    getMeta.mapSailsToErpDoctype(doctype,data);
 
     var data = actionUtil.parseValues(req);
     data.verifiedby = req.user.user;
     data.verifiedon = moment().format("YYYY-MM-DD h:mm:ss A");
-
 
     Queue.update({
       qid: data.qid,
@@ -41,7 +29,6 @@ module.exports = {
       verifiedby: req.user.user,
       verifiedon: moment().format("YYYY-MM-DD h:mm:ss A")
     }).exec(function afterwarderrors(err, updated) {
-
 
       if (err) return res.negotiate(err);
 
@@ -58,14 +45,10 @@ module.exports = {
         Files.update({
           parenttype: 'Queue',
           parentid: data.qid
-        }, {
-          // parenttype: 'Currentstat',
-          // parentid: Done[0].id
-        }).exec(function(err, file) {
+        }, {}).exec(function(err, file) {
           if (err) {
             return res.negotiate(err);
           }
-          console.log(file);
 
           // Queue.destroy({
           //     qid: data.qid
@@ -74,15 +57,12 @@ module.exports = {
           //     if (err) {
           //       return res.negotiate(err);
           //     }
-          //
           //   })
 
-            needle.get("http://192.168.31.195:9005/push?doctype="+ updated[0].doctype +"&docname="+ updated[0].cno + "&link=http://localhost:1337/files/download/"+ file[0].id+ "/", function(error, response) {
-                if (error)
-                  return res.negotiate(error);
-              });
-
-
+          needle.get(Connection.getPythonServerUrl() + "push?doctype=" + updated[0].doctype + "&docname=" + Connection.getFileDowloadUrl() + updated[0].cno + "&link=" + file[0].id + "/", function(error, response) {
+            if (error)
+              return res.negotiate(error);
+          });
         })
       })
 
