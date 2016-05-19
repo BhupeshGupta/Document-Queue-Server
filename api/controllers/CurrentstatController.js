@@ -12,98 +12,85 @@ var update = require('sails/lib/hooks/blueprints/actions/update');
 var actionUtil = require('sails/lib/hooks/blueprints/actionUtil');
 var create = require('sails/lib/hooks/blueprints/actions/update');
 var _ = require('underscore');
+var Promise = require("bluebird");
+var needleGet = Promise.promisify(needle.get, needle);
 
 module.exports = {
 
   updateStatus: function(req, res) {
-    try {
-      Queue.query("BEGIN", function(err) {
+    var queueQueryAsync = Promise.promisify(Queue.query);
 
-        if (err) {
-          throw new Error(err);
-        }
+    var queue = null,
+      currentStat = null,
+      file = null;
 
+    queueQueryAsync("START TRANSACTION;")
+      .then(function() {
         var data = actionUtil.parseValues(req);
-        getMetaData.mapSailsToErpDoctype(data.doctype, data);
-
         data.verifiedby = req.user.user;
         data.verifiedon = moment().format("YYYY-MM-DD h:mm:ss A");
 
-        Queue.update({
+        return Queue.update({
           qid: data.qid,
         }, {
           status: data.status,
           verifiedby: req.user.user,
           verifiedon: moment().format("YYYY-MM-DD h:mm:ss A")
-        }).exec(function afterwarderrors(err, updated) {
+        })
 
-          if (err) {
-            throw new Error(err);
-          }
-
-          Currentstat.update({
-            cno: updated[0].cno,
-            doctype: updated[0].doctype
-          }, {
-            status: updated[0].status,
-          }).exec(function(err, Done) {
-            if (err) {
-              throw new Error(err);
-            }
-
-            Files.update({
-              parenttype: 'Queue',
-              parentid: data.qid
-            }, {}).exec(function(err, file) {
-              if (err) {
-                throw new Error(err);
-              }
-
-              throw new Error('Error');
-
-              // Queue.destroy({
-              //     qid: data.qid
-              //   })
-              //   .exec(function(err, res) {
-              //     if (err) {throw new Error(err);}
-              //   })
-
-              needle.get(Connection.getPythonServerUrl() + "push?doctype=" + updated[0].doctype + "&docname=" + Connection.getFileDowloadUrl() + updated[0].cno + "&link=" + file[0].id + "/", function(error, response) {
-                if (err) {
-                  throw new Error(err);
-                }
-              });
-            })
-          })
-
-          Audittrail.create(updated[0]).exec(function createCB(err, created) {
-            if (err) {
-              throw new Error(err);
-            }
-            Queue.query("COMMIT", function(err) {
-              if (err) {
-                throw new Error(err);
-              }
-              return res.send(created);
-            });
-
-          });
+      })
+      .then(function(queueUpdate) {
+        queue = queueUpdate[0];
+        return Currentstat.update({
+          cno: queue.cno,
+          doctype: queue.doctype
+        }, {
+          status: queue.status,
         });
+      })
+      .then(function(currentStatUpdate) {
+        currentStat = currentStatUpdate[0];
+        return Files.update({
+          parenttype: 'Queue',
+          parentid: queue.qid
+        }, {
+          // TODO UPDATE FILE LINK
+        });
+      })
+      .then(function(fileUpdate) {
+        throw new Error('Fucked up');
+        file = fileUpdate;
+        return needleGet([
+          Connection.getPythonServerUrl(),
+          "push?doctype=",
+          queue.doctype,
+          "&docname=",
+          queue.cno,
+          "&link=",
+          Connection.getFileDowloadUrl(),
+          file[0].id,
+          "/"
+        ].join(""));
+      })
+      .then(function(pythonResponse) {
+        // TODO if status != 200, throw error and rollback
+        return Audittrail.create(queue);
+      })
+      .then(function() {
+        return res.send(currentStat);
+      })
+      .catch(function(error) {
+
+        console.log('Yay. error caught');
+        console.log(error);
+
+        Queue.query("ROLLBACK", function(err) {
+          if (err) {
+            return res.negotiate(err);
+          }
+        });
+        return res.negotiate(error);
       });
-    } catch (e) {
-      console.log('Yay. error caught');
-      console.log(e);
-      Queue.query("ROLLBACK", function(err) {
-        // The rollback failed--Catastrophic error!
-        if (err) {
-          return res.serverError(err);
-        }
-        // Return the error that resulted in the rollback
-        return res.serverError(e);
-      });
-    }
-
-
-
   }
+
 };

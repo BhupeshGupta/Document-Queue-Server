@@ -20,17 +20,19 @@
     "grunt-sails-linker": "~0.10.1",
     "grunt-sync": "0.2.4",
     "include-all": "~0.1.6",
+    "moment": "^2.13.0",
+    "node.extend": "^1.1.5",
     "rc": "1.0.1",
-    "sails": "~0.12.3",
+    "sails": "~0.11.5",
     "sails-disk": "~0.10.9",
-    "sails-mysql": "^0.12.1",
     "skipper": "^0.5.9",
     "skipper-disk": "^0.5.4",
     "underscore": "^1.8.3"
   },
   "scripts": {
     "debug": "node debug app.js",
-    "start": "node app.js"
+    "start": "node app.js",
+    "postinstall": "npm install sails-mysql-transactions"
   },
   "main": "app.js",
   "repository": {
