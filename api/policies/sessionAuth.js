@@ -13,10 +13,12 @@ module.exports = function(req, res, next) {
   console.log(sid);
   SessionVerify.VerifySession(sid)
     .then(function(user) {
+      console.log(user);
       req.user = user;
       return next();
     })
     .catch(function(error) {
+      console.log(error);
       return res.forbidden('You are not permitted to perform this action.');
     });
 

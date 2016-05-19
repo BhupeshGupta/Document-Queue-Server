@@ -45,7 +45,8 @@ module.exports.connections = {
      host: 'localhost',
      user: 'root', //optional
      password: 'root', //optional
-     database: 'demo' //optional
+     database: 'demo', //optional
+     pool: false
    },
 
   /***************************************************************************

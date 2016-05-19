@@ -4,15 +4,15 @@ var get = Promise.promisify(needle.get, needle);
 
 module.exports = {
   VerifySession: function(sid) {
+    console.log(sid);
     return get(Connection.getErpBaseUrl() + 'api/method/flows.flows.controller.ephesoft_integration.get_user?sid=' + sid, {
       compressed: true
     }).then(function(response) {
-      if (response.statusCode == 200) {
-        req.user = JSON.parse(response.body.message);
-        return req.user;
+      console.log(response.statusCode);
+      if (response.statusCode && response.statusCode == 200) {
+        return JSON.parse(response.body.message);
       }
-    }).catch(function(error) {
-      return error;
+      throw new Error('Logged Out');
     });
   }
 }

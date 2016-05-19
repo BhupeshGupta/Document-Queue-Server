@@ -215,6 +215,7 @@ def get_c():
 
 @get('/bar')
 def bargraph():
+    print 'hello' 
     return bar_graph(request.query.from_date,request.query.to_date)
 
 if __name__ == "__main__":

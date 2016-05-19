@@ -16,61 +16,94 @@ var _ = require('underscore');
 module.exports = {
 
   updateStatus: function(req, res) {
-    getMeta.mapSailsToErpDoctype(doctype,data);
+    try {
+      Queue.query("BEGIN", function(err) {
 
-    var data = actionUtil.parseValues(req);
-    data.verifiedby = req.user.user;
-    data.verifiedon = moment().format("YYYY-MM-DD h:mm:ss A");
-
-    Queue.update({
-      qid: data.qid,
-    }, {
-      status: data.status,
-      verifiedby: req.user.user,
-      verifiedon: moment().format("YYYY-MM-DD h:mm:ss A")
-    }).exec(function afterwarderrors(err, updated) {
-
-      if (err) return res.negotiate(err);
-
-      Currentstat.update({
-        cno: updated[0].cno,
-        doctype: updated[0].doctype
-      }, {
-        status: updated[0].status,
-      }).exec(function(err, Done) {
         if (err) {
-          return res.negotiate(err);
+          throw new Error(err);
         }
 
-        Files.update({
-          parenttype: 'Queue',
-          parentid: data.qid
-        }, {}).exec(function(err, file) {
+        var data = actionUtil.parseValues(req);
+        getMetaData.mapSailsToErpDoctype(data.doctype, data);
+
+        data.verifiedby = req.user.user;
+        data.verifiedon = moment().format("YYYY-MM-DD h:mm:ss A");
+
+        Queue.update({
+          qid: data.qid,
+        }, {
+          status: data.status,
+          verifiedby: req.user.user,
+          verifiedon: moment().format("YYYY-MM-DD h:mm:ss A")
+        }).exec(function afterwarderrors(err, updated) {
+
           if (err) {
-            return res.negotiate(err);
+            throw new Error(err);
           }
 
-          // Queue.destroy({
-          //     qid: data.qid
-          //   })
-          //   .exec(function(err, res) {
-          //     if (err) {
-          //       return res.negotiate(err);
-          //     }
-          //   })
+          Currentstat.update({
+            cno: updated[0].cno,
+            doctype: updated[0].doctype
+          }, {
+            status: updated[0].status,
+          }).exec(function(err, Done) {
+            if (err) {
+              throw new Error(err);
+            }
 
-          needle.get(Connection.getPythonServerUrl() + "push?doctype=" + updated[0].doctype + "&docname=" + Connection.getFileDowloadUrl() + updated[0].cno + "&link=" + file[0].id + "/", function(error, response) {
-            if (error)
-              return res.negotiate(error);
+            Files.update({
+              parenttype: 'Queue',
+              parentid: data.qid
+            }, {}).exec(function(err, file) {
+              if (err) {
+                throw new Error(err);
+              }
+
+              throw new Error('Error');
+
+              // Queue.destroy({
+              //     qid: data.qid
+              //   })
+              //   .exec(function(err, res) {
+              //     if (err) {throw new Error(err);}
+              //   })
+
+              needle.get(Connection.getPythonServerUrl() + "push?doctype=" + updated[0].doctype + "&docname=" + Connection.getFileDowloadUrl() + updated[0].cno + "&link=" + file[0].id + "/", function(error, response) {
+                if (err) {
+                  throw new Error(err);
+                }
+              });
+            })
+          })
+
+          Audittrail.create(updated[0]).exec(function createCB(err, created) {
+            if (err) {
+              throw new Error(err);
+            }
+            Queue.query("COMMIT", function(err) {
+              if (err) {
+                throw new Error(err);
+              }
+              return res.send(created);
+            });
+
           });
-        })
-      })
-
-      Audittrail.create(updated[0]).exec(function createCB(err, created) {
-        if (err) return res.negotiate(err);
-        return res.send(created);
+        });
       });
-    });
-  }
+    } catch (e) {
+      console.log('Yay. error caught');
+      console.log(e);
+      Queue.query("ROLLBACK", function(err) {
+        // The rollback failed--Catastrophic error!
+        if (err) {
+          return res.serverError(err);
+        }
+        // Return the error that resulted in the rollback
+        return res.serverError(e);
+      });
+    }
 
+
+
+  }
 };
