@@ -8,22 +8,24 @@ import json
 from datetime import date, timedelta as td
 import datetime
 
-
+config = {}
+with open('config.json', 'r') as config_file:
+    config = json.loads(config_file.read())
 
 def get_csv(start_date,end_date):
-    connection = pymysql.connect(host='localhost',
-                                 port=3306,
-                                 user='root',
-                                 password='root',
-                                 db='demo'
+    connection = pymysql.connect(host=config['SAILS_DB_HOST'],
+                                port=config['SAILS_DB_PORT'],
+                                user=config['SAILS_DB_USER'],
+                                password=config['SAILS_DB_PASS'],
+                                db=config['SAILS_DB_NAME']
                                 )
 
-    erpconnection = pymysql.connect(host='127.0.0.1',
-                                 port=3307,
-                                 user='root',
-                                 password='erpnext',
-                                 db='erpnext'
-                                )
+    erpconnection = pymysql.connect(host=config['ERP_DB_HOST'],
+                                    port=config['ERP_DB_PORT'],
+                                    user=config['ERP_DB_USER'],
+                                    password=config['ERP_DB_PASS'],
+                                    db=config['ERP_DB_NAME']
+                                    )
 
     try:
         sails_df = ''
@@ -215,7 +217,7 @@ def get_c():
 
 @get('/bar')
 def bargraph():
-    print 'hello' 
+    print 'hello'
     return bar_graph(request.query.from_date,request.query.to_date)
 
 if __name__ == "__main__":

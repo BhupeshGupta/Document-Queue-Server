@@ -4,13 +4,16 @@ from bottle import post, run, request, get, static_file
 import requests
 import shutil
 import uuid
-
+import os
 from lxml import etree
 from io import StringIO, BytesIO
 import datetime
 import decimal
 import json
 
+config = {}
+with open('config.json', 'r') as config_file:
+    config = json.loads(config_file.read())
 
 class AlfrescoRestApi(object):
     def __init__(self, user, password, url):
@@ -26,7 +29,6 @@ class AlfrescoRestApi(object):
 
         # TODO Check error code and raise exceptions
         print req.status_code
-
         xmldoc = etree.XML(req.content)
         if xmldoc.tag == 'ticket':
             self.ticket = xmldoc.text
@@ -74,22 +76,19 @@ class AlfrescoRestApi(object):
 
     @staticmethod
     def parse_node_ref(node_ref):
-        storage_type, _ = node_ref.split('://')
-        storage_id, file_id = _.split('/')
-        return storage_type, storage_id, file_id
+        storage_type, _ = node_ref.split('://')open("path/to/config.yml")
 
-
-alfresco = AlfrescoRestApi('admin', 'root', 'http://192.168.31.195:9090')
+alfresco = AlfrescoRestApi(config['ALFRESCO_DB_USER'], config['ALFRESCO_DB_PASS'], config['ALFRESCO_DB_HOST'])
 alfresco.login()
 
 
 def pushdoc(doctype, docname, link):
     erpconnection = pymysql.connect(
-        host='127.0.0.1',
-        port=3307,
-        user='root',
-        password='erpnext',
-        db='erpnext'
+        host=config['ERP_DB_HOST'],
+        port=config['ERP_DB_PORT'],
+        user=config['ERP_DB_USER'],
+        password=config['ERP_DB_PASS'],
+        db=config['ERP_DB_NAME']
     )
 
     doctype = {
@@ -152,6 +151,8 @@ def pushdoc(doctype, docname, link):
                 upload['nodeRef']
             )
 
+            cursor.execute('BEGIN;')
+
             sql = """
             update
             `tabIndent Invoice`
@@ -160,10 +161,13 @@ def pushdoc(doctype, docname, link):
             """.format(file_public_url=alfresco.get_public_link(upload['nodeRef']), name=result['name'])
 
             print sql
-
             cursor.execute(sql)
 
         erpconnection.commit()
+
+    except:
+        with erpconnection.cursor() as cursor:
+            cursor.execute('ROLLBACK;')
 
     finally:
         erpconnection.close()

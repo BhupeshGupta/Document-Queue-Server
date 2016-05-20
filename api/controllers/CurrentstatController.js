@@ -13,24 +13,30 @@ var actionUtil = require('sails/lib/hooks/blueprints/actionUtil');
 var create = require('sails/lib/hooks/blueprints/actions/update');
 var _ = require('underscore');
 var Promise = require("bluebird");
+var Transaction = require('sails-mysql-transactions').Transaction;
+
+var Transact = Promise.promisify(Transaction.start, Transaction);
 var needleGet = Promise.promisify(needle.get, needle);
 
 module.exports = {
 
   updateStatus: function(req, res) {
-    var queueQueryAsync = Promise.promisify(Queue.query);
-
     var queue = null,
       currentStat = null,
       file = null;
 
-    queueQueryAsync("START TRANSACTION;")
-      .then(function() {
+    var txn = null;
+
+    Transact()
+      .then(function(transaction) {
+        txn = transaction;
         var data = actionUtil.parseValues(req);
         data.verifiedby = req.user.user;
         data.verifiedon = moment().format("YYYY-MM-DD h:mm:ss A");
 
-        return Queue.update({
+        var QueueP = Promise.promisifyAll(Queue.transact(txn));
+
+        return QueueP.updateAsync({
           qid: data.qid,
         }, {
           status: data.status,
@@ -41,7 +47,9 @@ module.exports = {
       })
       .then(function(queueUpdate) {
         queue = queueUpdate[0];
-        return Currentstat.update({
+        var CurrentstatP = Promise.promisifyAll(Currentstat.transact(txn));
+
+        return CurrentstatP.updateAsync({
           cno: queue.cno,
           doctype: queue.doctype
         }, {
@@ -50,7 +58,9 @@ module.exports = {
       })
       .then(function(currentStatUpdate) {
         currentStat = currentStatUpdate[0];
-        return Files.update({
+        var FilesP = Promise.promisifyAll(Files.transact(txn));
+
+        return FilesP.updateAsync({
           parenttype: 'Queue',
           parentid: queue.qid
         }, {
@@ -58,7 +68,7 @@ module.exports = {
         });
       })
       .then(function(fileUpdate) {
-        throw new Error('Fucked up');
+        // throw new Error('Fucked up');
         file = fileUpdate;
         return needleGet([
           Connection.getPythonServerUrl(),
@@ -74,21 +84,17 @@ module.exports = {
       })
       .then(function(pythonResponse) {
         // TODO if status != 200, throw error and rollback
-        return Audittrail.create(queue);
+        var AudittrailP = Promise.promisifyAll(Audittrail.transact(txn));
+        return AudittrailP.createAsync(queue);
       })
       .then(function() {
+        txn.commit();
         return res.send(currentStat);
       })
       .catch(function(error) {
-
         console.log('Yay. error caught');
         console.log(error);
-
-        Queue.query("ROLLBACK", function(err) {
-          if (err) {
-            return res.negotiate(err);
-          }
-        });
+        txn.rollback();
         return res.negotiate(error);
       });
   }

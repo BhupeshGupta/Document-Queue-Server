@@ -7,9 +7,7 @@
 
 var Transaction = require('sails-mysql-transactions').Transaction;
 var create = require('sails/lib/hooks/blueprints/actions/create');
-
 var Promise = require("bluebird");
-
 var Transact = Promise.promisify(Transaction.start, Transaction);
 
 module.exports = {
@@ -22,18 +20,14 @@ module.exports = {
 
       return Account.createAsync(req.params.all())
         .then(function(account) {
-          // throw new Error('err thrown. rollback');
           transaction.commit();
           return res.json(account);
         })
-
-
     }).catch(function(err) {
       txn.rollback();
       return res.serverError(err);
     });
 
   }
-
 
 };
