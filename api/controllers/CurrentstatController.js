@@ -23,14 +23,15 @@ module.exports = {
   updateStatus: function(req, res) {
     var queue = null,
       currentStat = null,
-      file = null;
+      file = null,
+      data = {};
 
     var txn = null;
 
     Transact()
       .then(function(transaction) {
         txn = transaction;
-        var data = actionUtil.parseValues(req);
+        data = actionUtil.parseValues(req);
         data.verifiedby = req.user.user;
         data.verifiedon = moment().format("YYYY-MM-DD h:mm:ss A");
 
@@ -43,10 +44,10 @@ module.exports = {
           verifiedby: req.user.user,
           verifiedon: moment().format("YYYY-MM-DD h:mm:ss A")
         })
-
       })
       .then(function(queueUpdate) {
-        queue = queueUpdate[0];
+        queue = queueUpdate[0][0];
+
         var CurrentstatP = Promise.promisifyAll(Currentstat.transact(txn));
 
         return CurrentstatP.updateAsync({
@@ -69,7 +70,7 @@ module.exports = {
       })
       .then(function(fileUpdate) {
         // throw new Error('Fucked up');
-        file = fileUpdate;
+        file = fileUpdate[0][0];
         return needleGet([
           Connection.getPythonServerUrl(),
           "push?doctype=",
@@ -78,12 +79,14 @@ module.exports = {
           queue.cno,
           "&link=",
           Connection.getFileDowloadUrl(),
-          file[0].id,
+          file.id,
           "/"
         ].join(""));
       })
       .then(function(pythonResponse) {
-        // TODO if status != 200, throw error and rollback
+        if (pythonResponse[0].statusCode && pythonResponse[0].statusCode != 200)
+          throw new Error('Python returned ' + pythonResponse[0].statusCode);
+
         var AudittrailP = Promise.promisifyAll(Audittrail.transact(txn));
         return AudittrailP.createAsync(queue);
       })
@@ -92,7 +95,6 @@ module.exports = {
         return res.send(currentStat);
       })
       .catch(function(error) {
-        console.log('Yay. error caught');
         console.log(error);
         txn.rollback();
         return res.negotiate(error);

@@ -16,9 +16,15 @@ module.exports = {
    * Set the default database connection for models in the development       *
    * environment (see config/connections.js and config/models.js )           *
    ***************************************************************************/
+  models: {
+    connection: 'sqlserver'
+  },
 
-  // models: {
-  //   connection: 'someMongodbServer'
-  // }
+  urlconfig: {
+    ErpBaseUrl: 'http://192.168.31.195:8080/',
+    ReviewServerBaseUrl:'http://localhost:1337/',
+    FileDowloadUrl:'http://localhost:1337/files/download/',
+    PythonServerUrl:'http://192.168.31.195:9005/'
+  }
 
 };

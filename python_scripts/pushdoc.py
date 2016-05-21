@@ -15,6 +15,7 @@ config = {}
 with open('config.json', 'r') as config_file:
     config = json.loads(config_file.read())
 
+
 class AlfrescoRestApi(object):
     def __init__(self, user, password, url):
         self.user = user
@@ -26,7 +27,6 @@ class AlfrescoRestApi(object):
         req = requests.get('{}/alfresco/service/api/login?u={}&pw={}'.format(
             self.url, self.user, self.password
         ))
-
         # TODO Check error code and raise exceptions
         print req.status_code
         xmldoc = etree.XML(req.content)
@@ -46,11 +46,11 @@ class AlfrescoRestApi(object):
             data=alfersco_properties
         )
 
-        # TODO Check status code
-        print req.status_code
+        if req.status_code != 200:
+            print req.content
+            raise Exception('Alfresco upload returned {}'.format(req.status_code))
 
         req = req.json()
-        print req
 
         return req
 
@@ -59,15 +59,15 @@ class AlfrescoRestApi(object):
             self.url,
             '/'.join(AlfrescoRestApi.parse_node_ref(node_ref))
         )
-
+        print data
         req = requests.post(
             url,
             params={'alf_ticket': self.ticket},
             json=data
         )
-
-        # TODO Check status code
-        print req.status_code
+        if req.status_code != 200:
+            print req.content
+            raise Exception('Alfresco property update returned {}'.format(req.status_code))
         return req.json()
 
     def get_public_link(self, node_ref):
@@ -76,13 +76,41 @@ class AlfrescoRestApi(object):
 
     @staticmethod
     def parse_node_ref(node_ref):
-        storage_type, _ = node_ref.split('://')open("path/to/config.yml")
+        storage_type, _ = node_ref.split('://')
+        storage_id, file_id = _.split('/')
+        return storage_type, storage_id, file_id
 
 alfresco = AlfrescoRestApi(config['ALFRESCO_DB_USER'], config['ALFRESCO_DB_PASS'], config['ALFRESCO_DB_HOST'])
 alfresco.login()
 
 
 def pushdoc(doctype, docname, link):
+    def map_erp_doctype(doctype):
+        if doctype in ('Indent Invoice', 'Excise Invoice', 'VAT Form XII'):
+            return 'Indent Invoice'
+        if doctype == 'Consignment Note':
+            return 'Sales Invoice'
+
+    def get_conditions(erp_doctype, docname):
+        cond = []
+        if erp_doctype == 'Indent Invoice':
+            cond.append('transportation_invoice = "{docname}"')
+            cond.append('transportation_invoice like "{docname}-%"')
+        if erp_doctype == 'Sales Invoice':
+            cond.append('name = "{docname}"')
+            cond.append('name like "{docname}-%"')
+        return ' or '.join(cond).format(docname=docname, doctype=doctype)
+
+    def map_alfresco(doctype):
+        if doctype == 'Indent Invoice':
+            return 'II', 'Indent'
+        if doctype == 'Excise Invoice':
+            return 'EI', 'Excise_Invoice'
+        if doctype == 'Consignment Note':
+            return 'SI', 'sales'
+        if doctype == 'VAT Form XII':
+            return 'VXII', 'Form_XII'
+
     erpconnection = pymysql.connect(
         host=config['ERP_DB_HOST'],
         port=config['ERP_DB_PORT'],
@@ -91,23 +119,19 @@ def pushdoc(doctype, docname, link):
         db=config['ERP_DB_NAME']
     )
 
-    doctype = {
-        'Consignment Note': 'Sales Invoice'
-    }.get(doctype, 'Indent Invoice')
-
     try:
 
         with erpconnection.cursor() as cursor:
-            # Create a new record
+            erp_doctype = map_erp_doctype(doctype)
+
             sql = """
             select *
-            from `tabIndent Invoice`
-            where (
-                transportation_invoice = "{docname}"
-                or transportation_invoice like "{docname}-%"
-            )
+            from `tab{}`
+            where ({})
             and docstatus = 1
-            """.format(docname=docname, doctype=doctype)
+            """.format(erp_doctype, get_conditions(erp_doctype, docname))
+
+            print sql
 
             cursor.execute(sql)
             results = cursor.fetchall()
@@ -133,19 +157,26 @@ def pushdoc(doctype, docname, link):
                 for block in response.iter_content(1024):
                     handle.write(block)
 
+            prefix, alfresco_model = map_alfresco(doctype)
+            print {
+                'contenttype': '{}:{}'.format(prefix, alfresco_model),
+                'siteid': config['ALFRESCO_SITEID'],
+                'containerid': config['ALFRESCO_CONTAINERID']
+            }
+
             upload = alfresco.upload(
                 file_path,
                 '{}_{}.jpg'.format(docname, doctype),
                 {
-                    'contenttype': 'BG:Indent_Invoice',
-                    'siteid': 'receivings',
-                    'containerid': 'documentLibrary'
+                    'contenttype': '{}:{}'.format(prefix, alfresco_model),
+                    'siteid': config['ALFRESCO_SITEID'],
+                    'containerid': config['ALFRESCO_CONTAINERID']
                 }
             )
 
             update_properties = alfresco.update_properties({
                 "properties": {
-                    'BG:{}'.format(key): value for key, value in result.iteritems() if value
+                    '{}:{}'.format(prefix, key): value for key, value in result.iteritems() if value
                     }
                 },
                 upload['nodeRef']
@@ -160,15 +191,16 @@ def pushdoc(doctype, docname, link):
             where name= "{name}"
             """.format(file_public_url=alfresco.get_public_link(upload['nodeRef']), name=result['name'])
 
-            print sql
             cursor.execute(sql)
 
         erpconnection.commit()
 
-    except:
+    except Exception as e:
+        print e
         with erpconnection.cursor() as cursor:
             cursor.execute('ROLLBACK;')
 
+        raise
     finally:
         erpconnection.close()
 

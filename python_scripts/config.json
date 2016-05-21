@@ -1,0 +1,17 @@
+{
+  "ERP_DB_HOST": "localhost",
+  "ERP_DB_PORT": 3307,
+  "ERP_DB_USER": "root",
+  "ERP_DB_PASS": "erpnext",
+  "ERP_DB_NAME": "erpnext",
+  "ALFRESCO_DB_USER": "admin",
+  "ALFRESCO_DB_PASS": "root",
+  "ALFRESCO_DB_HOST": "http://192.168.31.195:9090",
+  "ALFRESCO_SITEID": "receiving",
+  "ALFRESCO_CONTAINERID": "documentLibrary",
+  "SAILS_DB_HOST": "127.0.0.1",
+  "SAILS_DB_PORT": 3306,
+  "SAILS_DB_USER": "root",
+  "SAILS_DB_PASS": "root",
+  "SAILS_DB_NAME": "demo"
+}

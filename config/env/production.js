@@ -35,4 +35,10 @@ module.exports = {
   //   level: "silent"
   // }
 
+    urlconfig: {
+      ErpBaseUrl: 'http://192.168.31.195:8080/',
+      ReviewServerBaseUrl:'http://localhost:1337/',
+      FileDowloadUrl:'http://localhost:1337/files/download/',
+      PythonServerUrl:'http://192.168.31.195:9005/'
+    }
 };
