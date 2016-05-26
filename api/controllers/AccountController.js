@@ -16,9 +16,7 @@ module.exports = {
     Transact().then(function(transaction) {
       txn = transaction;
       var AccountP = Promise.promisifyAll(Account.transact(transaction));
-      Account = AccountP;
-
-      return Account.createAsync(req.params.all())
+      return AccountP.createAsync(req.params.all())
         .then(function(account) {
           transaction.commit();
           return res.json(account);

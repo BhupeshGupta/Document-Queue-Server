@@ -15,7 +15,7 @@ module.exports = {
       type: "string"
     },
     account: {
-      model: 'account'
+      model: 'Account'
     },
     status: {
       type: 'string',

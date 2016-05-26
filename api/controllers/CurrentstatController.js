@@ -71,7 +71,7 @@ module.exports = {
       .then(function(fileUpdate) {
         // throw new Error('Fucked up');
         file = fileUpdate[0][0];
-        return needleGet([
+        var url = [
           Connection.getPythonServerUrl(),
           "push?doctype=",
           queue.doctype,
@@ -81,14 +81,20 @@ module.exports = {
           Connection.getFileDowloadUrl(),
           file.id,
           "/"
-        ].join(""));
+        ].join("");
+        console.log(url)
+
+        return needleGet(url);
       })
       .then(function(pythonResponse) {
         if (pythonResponse[0].statusCode && pythonResponse[0].statusCode != 200)
           throw new Error('Python returned ' + pythonResponse[0].statusCode);
 
         var AudittrailP = Promise.promisifyAll(Audittrail.transact(txn));
-        return AudittrailP.createAsync(queue);
+        var qwerty = _.clone(queue);
+        delete qwerty['createdAt'];
+        delete qwerty['updatedAt'];
+        return AudittrailP.createAsync(qwerty);
       })
       .then(function() {
         txn.commit();

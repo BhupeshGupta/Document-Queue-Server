@@ -111,6 +111,29 @@ def pushdoc(doctype, docname, link):
         if doctype == 'VAT Form XII':
             return 'VXII', 'Form_XII'
 
+    def find_doc(doctype):
+        return 'receiving_file' if doctype == 'Indent Invoice' or doctype == 'Consignment Note' else 'data_bank'
+
+    def update_rec_file(doctype):
+        if find_doc(doctype) == 'receiving_file':
+            return alfresco.get_public_link(upload['nodeRef'])
+        else:
+            sql = """
+            select data_bank
+            from `tab{}` where ({})
+            and docstatus = 1
+            """.format(erp_doctype, get_conditions(erp_doctype, docname))
+            cursor.execute(sql)
+            results = cursor.fetchall()
+            result = json.loads(results[0][0])
+            result.setdefault('receivings', {})
+            print alfresco.get_public_link(upload['nodeRef'])
+            result['receivings'].update({doctype: alfresco.get_public_link(upload['nodeRef'])})
+            return json.dumps(result)
+
+
+
+
     erpconnection = pymysql.connect(
         host=config['ERP_DB_HOST'],
         port=config['ERP_DB_PORT'],
@@ -120,7 +143,6 @@ def pushdoc(doctype, docname, link):
     )
 
     try:
-
         with erpconnection.cursor() as cursor:
             erp_doctype = map_erp_doctype(doctype)
 
@@ -130,8 +152,6 @@ def pushdoc(doctype, docname, link):
             where ({})
             and docstatus = 1
             """.format(erp_doctype, get_conditions(erp_doctype, docname))
-
-            print sql
 
             cursor.execute(sql)
             results = cursor.fetchall()
@@ -150,6 +170,8 @@ def pushdoc(doctype, docname, link):
 
             result = results[0]
 
+            del result['indent']
+
             file_path = '/tmp/{}'.format(uuid.uuid4())
             with open(file_path, 'wb') as handle:
                 response = requests.get(link, stream=True)
@@ -158,11 +180,6 @@ def pushdoc(doctype, docname, link):
                     handle.write(block)
 
             prefix, alfresco_model = map_alfresco(doctype)
-            print {
-                'contenttype': '{}:{}'.format(prefix, alfresco_model),
-                'siteid': config['ALFRESCO_SITEID'],
-                'containerid': config['ALFRESCO_CONTAINERID']
-            }
 
             upload = alfresco.upload(
                 file_path,
@@ -180,16 +197,22 @@ def pushdoc(doctype, docname, link):
                     }
                 },
                 upload['nodeRef']
+
             )
 
             cursor.execute('BEGIN;')
-
             sql = """
             update
-            `tabIndent Invoice`
-            set receiving_file = "{file_public_url}"
-            where name= "{name}"
-            """.format(file_public_url=alfresco.get_public_link(upload['nodeRef']), name=result['name'])
+            `tab{}`
+            set {} = '{}'
+            where ({})
+            and docstatus = 1
+            """.format(
+                map_erp_doctype(doctype),
+                find_doc(doctype),
+                update_rec_file(doctype),
+                get_conditions(erp_doctype, docname)
+            )
 
             cursor.execute(sql)
 
@@ -199,7 +222,6 @@ def pushdoc(doctype, docname, link):
         print e
         with erpconnection.cursor() as cursor:
             cursor.execute('ROLLBACK;')
-
         raise
     finally:
         erpconnection.close()
