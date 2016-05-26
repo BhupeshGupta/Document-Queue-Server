@@ -35,10 +35,14 @@ module.exports = {
   //   level: "silent"
   // }
 
+  models: {
+    connection: 'erpsqlserver'
+  },
+
     urlconfig: {
-      ErpBaseUrl: 'http://192.168.31.195:8080/',
-      ReviewServerBaseUrl:'http://localhost:1337/',
-      FileDowloadUrl:'http://localhost:1337/files/download/',
-      PythonServerUrl:'http://192.168.31.195:9005/'
+      ErpBaseUrl: 'https://erp.arungas.com/',
+      ReviewServerBaseUrl:'http://review.arungas.com/',
+      FileDowloadUrl:'http://review.arungas.com/files/download/',
+      PythonServerUrl:'http://localhost:9005/'
     }
 };

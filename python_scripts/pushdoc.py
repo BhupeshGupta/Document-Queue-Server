@@ -51,7 +51,7 @@ class AlfrescoRestApi(object):
             raise Exception('Alfresco upload returned {}'.format(req.status_code))
 
         req = req.json()
-
+        print req
         return req
 
     def update_properties(self, data, node_ref):
@@ -59,7 +59,8 @@ class AlfrescoRestApi(object):
             self.url,
             '/'.join(AlfrescoRestApi.parse_node_ref(node_ref))
         )
-        print data
+
+        print json.dumps(data)
         req = requests.post(
             url,
             params={'alf_ticket': self.ticket},
@@ -169,9 +170,7 @@ def pushdoc(doctype, docname, link):
                 result.update(update)
 
             result = results[0]
-
             del result['indent']
-
             file_path = '/tmp/{}'.format(uuid.uuid4())
             with open(file_path, 'wb') as handle:
                 response = requests.get(link, stream=True)

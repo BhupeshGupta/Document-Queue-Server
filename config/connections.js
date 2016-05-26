@@ -46,12 +46,20 @@ module.exports.connections = {
     user: 'root', //optional
     password: 'root', //optional
     database: 'demo', //optional
-
     transactionConnectionLimit: 10,
     rollbackTransactionOnError: true,
     queryCaseSensitive: false,
   },
-
+  erpsqlserver: {
+    adapter: 'sails-mysql-transactions',
+    host: 'erp.arungas.com',
+    user: 'documentqueue', //optional
+    database: 'documentqueue', //optional
+    password: process.env.password, //optional
+    transactionConnectionLimit: 10,
+    rollbackTransactionOnError: true,
+    queryCaseSensitive: false,
+  }
   /***************************************************************************
    *                                                                          *
    * MongoDB is the leading NoSQL database.                                   *
