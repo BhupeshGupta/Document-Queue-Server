@@ -1,8 +1,6 @@
 import pymysql
 import pandas as pd
 import time
-import bottle
-from bottle import post, run, request, get, static_file
 from time import gmtime, strftime
 import json
 from datetime import date, timedelta as td
@@ -208,17 +206,3 @@ def bar_graph(start_date, end_date):
 
     print json.dumps(rs)
     return json.dumps(rs)
-
-
-@get('/excel')
-def get_c():
-    get_csv(request.query.from_date,request.query.to_date)
-    return static_file('pandas.csv', root='/tmp')
-
-@get('/bar')
-def bargraph():
-    print 'hello'
-    return bar_graph(request.query.from_date,request.query.to_date)
-
-if __name__ == "__main__":
-    run(host="0.0.0.0", port=9005)

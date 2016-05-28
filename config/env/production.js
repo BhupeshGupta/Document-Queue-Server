@@ -43,6 +43,6 @@ module.exports = {
       ErpBaseUrl: 'https://erp.arungas.com/',
       ReviewServerBaseUrl:'http://review.arungas.com/',
       FileDowloadUrl:'http://review.arungas.com/files/download/',
-      PythonServerUrl:'http://localhost:9005/'
+      PythonServerUrl:'http://approve.arungas.com:9005/'
     }
 };

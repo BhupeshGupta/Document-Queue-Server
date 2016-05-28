@@ -1,6 +1,4 @@
 import pymysql
-import bottle
-from bottle import post, run, request, get, static_file
 import requests
 import shutil
 import uuid
@@ -224,12 +222,3 @@ def pushdoc(doctype, docname, link):
         raise
     finally:
         erpconnection.close()
-
-
-@get('/push')
-def push_doc():
-    pushdoc(request.query.doctype, request.query.docname, request.query.link)
-
-
-if __name__ == "__main__":
-    run(host="0.0.0.0", port=9005)
