@@ -22,8 +22,8 @@ module.exports = {
 
   urlconfig: {
     ErpBaseUrl: 'http://192.168.31.195:8080/',
-    ReviewServerBaseUrl:'http://localhost:1337/',
-    FileDowloadUrl:'http://localhost:1337/files/download/',
+    ReviewServerBaseUrl:'http://192.168.31.195:1337/',
+    FileDowloadUrl:'http://192.168.31.195:1337/files/download/',
     PythonServerUrl:'http://192.168.31.195:9005/'
   }
 
