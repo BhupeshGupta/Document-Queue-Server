@@ -1,27 +1,19 @@
+var needle = require('needle');
 var Promise = require("bluebird");
-var http = require('http');
-
+var get = Promise.promisify(needle.get, needle);
 
 module.exports = {
   VerifySession: function(sid) {
-    return new Promise(function(resolve, reject) {
-      http.get(Connection.getErpBaseUrl() +
-        'api/method/flows.flows.controller.ephesoft_integration.get_user?sid=' + sid,
-        function(res) {
-          res.setEncoding('utf8');
-          var body = '';
-          res.on('data', (chunk) => {
-            body = body + chunk;
-            console.log(chunk);
-          });
-          res.on('end', () => {
-            console.log(res.statusCode);
-            if (res.statusCode && res.statusCode == 200) {
-              return resolve(JSON.parse(JSON.parse(body).message));
-            }
-            return reject();
-          })
-        })
+    console.log(sid);
+    return get(Connection.getErpBaseUrl() + 'api/method/flows.flows.controller.ephesoft_integration.get_user?sid=' + sid, {
+      compressed: true
+    }).then(function(res) {
+      var response = res[0];
+      console.log(response.statusCode);
+      if (response.statusCode && response.statusCode == 200) {
+        return JSON.parse(response.body.message);
+      }
+      throw new Error('Logged Out');
     });
   }
 }
