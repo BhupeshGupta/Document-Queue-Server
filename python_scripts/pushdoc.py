@@ -37,7 +37,7 @@ class AlfrescoRestApi(object):
     def upload(self, file_path, file_name, alfersco_properties):
         req = requests.post(
             '{}/alfresco/service/api/upload'.format(self.url),
-            params={'alf_ticket': self.ticket},
+            auth=(self.user, self.password),
             files=[
                 ('filedata', (file_name, open(file_path, 'rb')))
             ],
@@ -61,7 +61,7 @@ class AlfrescoRestApi(object):
         print json.dumps(data)
         req = requests.post(
             url,
-            params={'alf_ticket': self.ticket},
+            auth=(self.user, self.password),
             json=data
         )
         if req.status_code != 200:
@@ -130,9 +130,6 @@ def pushdoc(doctype, docname, link):
             result['receivings'].update({doctype: alfresco.get_public_link(upload['nodeRef'])})
             return json.dumps(result)
 
-
-
-
     erpconnection = pymysql.connect(
         host=config['ERP_DB_HOST'],
         port=config['ERP_DB_PORT'],
@@ -168,7 +165,10 @@ def pushdoc(doctype, docname, link):
                 result.update(update)
 
             result = results[0]
-            del result['indent']
+
+            if 'indent' in result:
+                del result['indent']
+
             file_path = '/tmp/{}'.format(uuid.uuid4())
             with open(file_path, 'wb') as handle:
                 response = requests.get(link, stream=True)
