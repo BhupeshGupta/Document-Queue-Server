@@ -14,11 +14,17 @@ var create = require('sails/lib/hooks/blueprints/actions/update');
 var _ = require('underscore');
 var Promise = require("bluebird");
 var Transaction = require('sails-mysql-transactions').Transaction;
-
 var Transact = Promise.promisify(Transaction.start, Transaction);
 var needleGet = Promise.promisify(needle.get, needle);
 
 module.exports = {
+
+  create: function(req, res){
+    req.connection.on('close',function(){
+     console.log('Client closed The connection / Broken Pipe');
+   });
+   return create(req, res);
+  }
 
   updateStatus: function(req, res) {
     var queue = null,
