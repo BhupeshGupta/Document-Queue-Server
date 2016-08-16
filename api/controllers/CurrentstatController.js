@@ -19,12 +19,7 @@ var needleGet = Promise.promisify(needle.get, needle);
 
 module.exports = {
 
-  create: function(req, res){
-    req.connection.on('close',function(){
-     console.log('Client closed The connection / Broken Pipe');
-   });
-   return create(req, res);
- },
+
 
   updateStatus: function(req, res) {
     var queue = null,
