@@ -24,7 +24,7 @@ module.exports = {
      console.log('Client closed The connection / Broken Pipe');
    });
    return create(req, res);
-  }
+ },
 
   updateStatus: function(req, res) {
     var queue = null,
