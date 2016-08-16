@@ -10,7 +10,7 @@ var needle = require('needle');
 var fs = require('fs');
 var update = require('sails/lib/hooks/blueprints/actions/update');
 var actionUtil = require('sails/lib/hooks/blueprints/actionUtil');
-var create = require('sails/lib/hooks/blueprints/actions/update');
+var create = require('sails/lib/hooks/blueprints/actions/create');
 var _ = require('underscore');
 var Promise = require("bluebird");
 var Transaction = require('sails-mysql-transactions').Transaction;
@@ -19,7 +19,12 @@ var needleGet = Promise.promisify(needle.get, needle);
 
 module.exports = {
 
-
+  create: function(req, res){
+    req.connection.on('close',function(){
+     console.log('Client closed The connection / Broken Pipe');
+   });
+   return create(req, res);
+  },
 
   updateStatus: function(req, res) {
     var queue = null,
