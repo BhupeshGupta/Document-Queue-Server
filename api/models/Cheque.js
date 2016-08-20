@@ -9,7 +9,10 @@ module.exports = {
 
   attributes: {
     chequeDate: {
-      type: 'datetime',
+      type: 'date',
+    },
+    receivingDate: {
+      type: 'date'
     },
     bankOfCheque: {
       type: 'string',
@@ -26,6 +29,9 @@ module.exports = {
     chequeImage:{
       model:'Files',
       unique: true
+    },
+    company:{
+      type:'string'
     },
     PayInSlip: {
       model: 'PayInSlip'

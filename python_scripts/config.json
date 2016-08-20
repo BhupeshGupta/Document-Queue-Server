@@ -1,17 +1,17 @@
 {
-  "ERP_DB_HOST": "localhost",
-  "ERP_DB_PORT": 3307,
-  "ERP_DB_USER": "root",
-  "ERP_DB_PASS": "erpnext",
-  "ERP_DB_NAME": "erpnext",
+  "ERP_DB_HOST": "erp.arungas.com",
+  "ERP_DB_PORT": 3306,
+  "ERP_DB_USER": "python",
+  "ERP_DB_PASS": "nohtyp",
+  "ERP_DB_NAME": "site1.local",
   "ALFRESCO_DB_USER": "admin",
   "ALFRESCO_DB_PASS": "root",
-  "ALFRESCO_DB_HOST": "http://128.199.189.103:8080",
+  "ALFRESCO_DB_HOST": "http://docs.arungas.com:8080",
   "ALFRESCO_SITEID": "receivings",
   "ALFRESCO_CONTAINERID": "documentLibrary",
-  "SAILS_DB_HOST": "127.0.0.1",
+  "SAILS_DB_HOST": "erp.arungas.com",
   "SAILS_DB_PORT": 3306,
-  "SAILS_DB_USER": "root",
-  "SAILS_DB_PASS": "root",
-  "SAILS_DB_NAME": "demo"
+  "SAILS_DB_USER": "documentqueue",
+  "SAILS_DB_PASS": "queuedocument",
+  "SAILS_DB_NAME": "documentqueue"
 }
