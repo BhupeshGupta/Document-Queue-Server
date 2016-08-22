@@ -40,7 +40,7 @@ module.exports = {
   },
 
     urlconfig: {
-      ErpBaseUrl: 'https://approve.arungas.com/api/',
+      ErpBaseUrl: 'https://erp.arungas.com/',
       ReviewServerBaseUrl:'http://approve.arungas.com/review/',
       FileDowloadUrl:'http://approve.arungas.com/files/download/',
       PythonServerUrl:'http://approve.arungas.com:9005/'

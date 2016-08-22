@@ -52,10 +52,10 @@ module.exports.connections = {
   },
   erpsqlserver: {
     adapter: 'sails-mysql-transactions',
-    host: 'localhost',
-    user: 'root', //optional
-    password: 'root', //optional
-    database: 'demo', //optional
+    host: 'erp.arungas.com',
+    user: 'documentqueue', //optional
+    password: 'queuedocument', //optional
+    database: 'documentqueue', //optional
     transactionConnectionLimit: 10,
     rollbackTransactionOnError: true,
     queryCaseSensitive: false,
