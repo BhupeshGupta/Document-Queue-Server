@@ -27,6 +27,7 @@ module.exports = {
   },
 
   updateStatus: function(req, res) {
+    req.connection.setTimeout(10 * 60 * 1000);
     var queue = null,
       currentStat = null,
       file = null,
@@ -52,7 +53,8 @@ module.exports = {
         })
       })
       .then(function(queueUpdate) {
-        queue = queueUpdate[0][0];
+        console.log(queueUpdate);
+	queue = queueUpdate[0];
 
         var CurrentstatP = Promise.promisifyAll(Currentstat.transact(txn));
 
@@ -76,7 +78,7 @@ module.exports = {
       })
       .then(function(fileUpdate) {
         // throw new Error('Fucked up');
-        file = fileUpdate[0][0];
+        file = fileUpdate[0];
         var url = [
           Connection.getPythonServerUrl(),
           "push?doctype=",
@@ -90,7 +92,7 @@ module.exports = {
         ].join("");
         console.log(url)
 
-        return needleGet(url);
+        return needleGet(url,{read_timeout:60000,open_timeout:60000});
       })
       .then(function(pythonResponse) {
         if (pythonResponse[0].statusCode && pythonResponse[0].statusCode != 200)

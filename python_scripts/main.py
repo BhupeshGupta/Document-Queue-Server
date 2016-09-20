@@ -16,9 +16,9 @@ def bargraph():
 
 
 @get('/push')
-def push_doc():
+def push_doc():    
     pushdoc(request.query.doctype, request.query.docname, request.query.link)
-
+    return
 
 if __name__ == "__main__":
     run(host="0.0.0.0", port=9005)

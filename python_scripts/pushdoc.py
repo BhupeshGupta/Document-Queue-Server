@@ -187,7 +187,7 @@ def pushdoc(doctype, docname, link):
                     'containerid': config['ALFRESCO_CONTAINERID']
                 }
             )
-
+	    print upload
             update_properties = alfresco.update_properties({
                 "properties": {
                     '{}:{}'.format(prefix, key): value for key, value in result.iteritems() if value
@@ -222,3 +222,4 @@ def pushdoc(doctype, docname, link):
         raise
     finally:
         erpconnection.close()
+	
