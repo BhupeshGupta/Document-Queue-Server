@@ -97,7 +97,9 @@ lib-cov
 *.out
 *.pid
 npm-debug.log
-
+python_scripts/config.json
+config/env/*
+config/connection.js
 
 
 
