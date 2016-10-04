@@ -147,11 +147,11 @@ def get_csv(start_date,end_date):
 
 def bar_graph(start_date, end_date):
     connection = pymysql.connect(
-        host='localhost',
+        host='erp.arungas.com',
         port=3306,
-        user='root',
-        password='root',
-        db='demo'
+        user='documentqueue',
+        password='queuedocument',
+        db='documentqueue'
     )
 
     rs = []

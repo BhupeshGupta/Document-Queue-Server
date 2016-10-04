@@ -45,7 +45,7 @@ class AlfrescoRestApi(object):
         )
 
         if req.status_code != 200:
-            print req.content
+            
             raise Exception('Alfresco upload returned {}'.format(req.status_code))
 
         req = req.json()
@@ -58,14 +58,14 @@ class AlfrescoRestApi(object):
             '/'.join(AlfrescoRestApi.parse_node_ref(node_ref))
         )
 
-        print json.dumps(data)
+        
         req = requests.post(
             url,
             auth=(self.user, self.password),
             json=data
         )
         if req.status_code != 200:
-            print req.content
+           
             raise Exception('Alfresco property update returned {}'.format(req.status_code))
         return req.json()
 
@@ -83,7 +83,8 @@ alfresco = AlfrescoRestApi(config['ALFRESCO_DB_USER'], config['ALFRESCO_DB_PASS'
 alfresco.login()
 
 
-def pushdoc(doctype, docname, link):
+def pushdoc(doctype, docname, link):    
+    print datetime.datetime.now().time()
     def map_erp_doctype(doctype):
         if doctype in ('Indent Invoice', 'Excise Invoice', 'VAT Form XII'):
             return 'Indent Invoice'
@@ -126,7 +127,6 @@ def pushdoc(doctype, docname, link):
             results = cursor.fetchall()
             result = json.loads(results[0][0])
             result.setdefault('receivings', {})
-            print alfresco.get_public_link(upload['nodeRef'])
             result['receivings'].update({doctype: alfresco.get_public_link(upload['nodeRef'])})
             return json.dumps(result)
 
@@ -141,7 +141,6 @@ def pushdoc(doctype, docname, link):
     try:
         with erpconnection.cursor() as cursor:
             erp_doctype = map_erp_doctype(doctype)
-
             sql = """
             select *
             from `tab{}`
@@ -177,7 +176,7 @@ def pushdoc(doctype, docname, link):
                     handle.write(block)
 
             prefix, alfresco_model = map_alfresco(doctype)
-
+	    print datetime.datetime.now().time()
             upload = alfresco.upload(
                 file_path,
                 '{}_{}.jpg'.format(docname, doctype),
@@ -187,7 +186,7 @@ def pushdoc(doctype, docname, link):
                     'containerid': config['ALFRESCO_CONTAINERID']
                 }
             )
-	    print upload
+	    print datetime.datetime.now().time()
             update_properties = alfresco.update_properties({
                 "properties": {
                     '{}:{}'.format(prefix, key): value for key, value in result.iteritems() if value
@@ -196,7 +195,7 @@ def pushdoc(doctype, docname, link):
                 upload['nodeRef']
 
             )
-
+	    print datetime.datetime.now().time()
             cursor.execute('BEGIN;')
             sql = """
             update
@@ -222,4 +221,4 @@ def pushdoc(doctype, docname, link):
         raise
     finally:
         erpconnection.close()
-	
+	print datetime.datetime.now().time()
