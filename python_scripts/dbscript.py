@@ -24,7 +24,7 @@ def get_csv(start_date,end_date):
             # Create a new record
 
             sql = """
-            SELECT DISTINCT inv.name AS bill_no,
+            SELECT inv.name AS bill_no,
                 inv.customer,
                 inv.transaction_date AS posting_date,
                 inv.amended_from AS bill_amended_from,
@@ -32,7 +32,8 @@ def get_csv(start_date,end_date):
                 sinv.amended_From AS sales_amended_from,
                 inv.supplier,
                 omc.field_officer,
-                doc.status
+                doc.status,
+                doc.doctype
             FROM documentqueue.currentstat doc
             RIGHT JOIN `tabSales Invoice` sinv ON doc.cno = sinv.name
             LEFT JOIN `tabIndent Invoice` inv ON inv.transportation_invoice = sinv.name
@@ -59,7 +60,6 @@ def get_csv(start_date,end_date):
 
             df = pd.DataFrame(result)
             df.columns = [x[0] for x in cursor.description]
-            df['doctype'] = "Indent Invoice"
             indent_df = df
             indent_df.to_csv("/tmp/indent.csv", index = False)
 
