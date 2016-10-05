@@ -11,12 +11,6 @@ with open('config.json', 'r') as config_file:
     config = json.loads(config_file.read())
 
 def get_csv(start_date,end_date):
-    connection = pymysql.connect(host=config['SAILS_DB_HOST'],
-                                port=config['SAILS_DB_PORT'],
-                                user=config['SAILS_DB_USER'],
-                                password=config['SAILS_DB_PASS'],
-                                db=config['SAILS_DB_NAME']
-                                )
 
     erpconnection = pymysql.connect(host=config['ERP_DB_HOST'],
                                     port=config['ERP_DB_PORT'],
@@ -26,88 +20,29 @@ def get_csv(start_date,end_date):
                                     )
 
     try:
-        sails_df = ''
-        erp_df = ''
-        con=[]
-        others=[]
-        indent_df = ''
-        with connection.cursor() as cursor:
-            # Create a new record
-            sql = """
-            select cno as name, doctype, status, account
-            from currentstat
-            where date between "{start_date}" and "{end_date}"
-            """.format(start_date=start_date, end_date=end_date)
-
-            cursor.execute(sql)
-            result = cursor.fetchall()
-            data = list(result)
-
-            for x in result:
-                if x[1] == "Consignment Note":
-                    con.append(x[0])
-                else:
-                    others.append(x[0])
-            df = pd.DataFrame(data)
-
-            if not result:
-                df.to_csv("/tmp/pandas.csv", index = False)
-                return
-
-            df.columns = [x[0] for x in cursor.description]
-            sails_df = df
-
-        # connection is not autocommit by default. So you must commit to save
-        # your changes.
-        connection.commit()
-
         with erpconnection.cursor() as cursor:
             # Create a new record
-            cond = ' or '.join( ['name = "{0}" or name like "{0}-%"'.format(x) for x in con] )
 
             sql = """
-            select name, customer, posting_date, amended_from, company as supplier
-            from `tabSales Invoice`
-            where  ({cond})
-            and docstatus = 1
-            """.format(cond=cond)
-
-
-            cursor.execute(sql)
-            result = []
-            for x in cursor.fetchall():
-                x = [y for y in x]
-                if x[3]:
-                    x[0] = '-'.join(x[0].split('-')[:-1])
-                result.append(x)
-
-            df = pd.DataFrame(result)
-            df.columns = [x[0] for x in cursor.description]
-            df['doctype'] = "Consignment Note"
-            erp_df = df
-            erp_df.to_csv("/tmp/erp.csv", index = False)
-
-
-        with erpconnection.cursor() as cursor:
-            # Create a new record
-            cond = ' or '.join( ['inv.transportation_invoice = "{0}" or inv.transportation_invoice like "{0}-%"'.format(x) for x in con] )
-
-            sql = """
-            select inv.name as bill_no,
-            inv.customer,
-            inv.transaction_date as posting_date,
-            inv.amended_from as bill_amended_from,
-            inv.transportation_invoice as name,
-            sinv.amended_From as sales_amended_from,
-		    inv.supplier,
-            omc.field_officer
-            from `tabIndent Invoice` inv join `tabSales Invoice` sinv
-            on inv.transportation_invoice = sinv.name
-    		join `tabOMC Customer Registration` omc on
-    		inv.omc_customer_registration = omc.name
-            where  ({cond})
-            and inv.docstatus = 1
-            """.format(cond=cond)
+            SELECT DISTINCT inv.name AS bill_no,
+                inv.customer,
+                inv.transaction_date AS posting_date,
+                inv.amended_from AS bill_amended_from,
+                inv.transportation_invoice AS name,
+                sinv.amended_From AS sales_amended_from,
+                inv.supplier,
+                omc.field_officer,
+                doc.status
+            FROM documentqueue.currentstat doc
+            RIGHT JOIN `tabSales Invoice` sinv ON doc.cno = sinv.name
+            LEFT JOIN `tabIndent Invoice` inv ON inv.transportation_invoice = sinv.name
+            LEFT JOIN `tabOMC Customer Registration` omc ON inv.omc_customer_registration = omc.name
+            WHERE
+                inv.docstatus = 1 and
+                sinv.docstatus = 1 and
+                omc.docstatus = 1;
+            """.format(start_date, end_date)
+            # TODO: Add date filter
 
             cursor.execute(sql)
 
@@ -128,30 +63,21 @@ def get_csv(start_date,end_date):
             indent_df = df
             indent_df.to_csv("/tmp/indent.csv", index = False)
 
-
-        fully_merged = pd.merge(sails_df, indent_df.append(erp_df), on=['name','doctype'])
-        del fully_merged['bill_amended_from']
-        del fully_merged['sales_amended_from']
-        del fully_merged['amended_from']
-        fully_merged = fully_merged[['posting_date', 'bill_no', 'customer', 'status', 'doctype', 'supplier', 'field_officer','account','name']]
-        fully_merged = fully_merged.sort(['customer', 'posting_date'], ascending=[1, 1])
-        fully_merged.to_csv("/tmp/pandas.csv", index = False)
-
         erpconnection.commit()
 
     finally:
-        connection.close()
         erpconnection.close()
 
 
 
 def bar_graph(start_date, end_date):
+
     connection = pymysql.connect(
-        host='erp.arungas.com',
-        port=3306,
-        user='documentqueue',
-        password='queuedocument',
-        db='documentqueue'
+        host=config['SAILS_DB_HOST'],
+        port=config['SAILS_DB_PORT'],
+        user=config['SAILS_DB_USER'],
+        password=config['SAILS_DB_PASS'],
+        db=config['SAILS_DB_NAME']
     )
 
     rs = []
@@ -198,7 +124,7 @@ def bar_graph(start_date, end_date):
         rs = {'max': max([x['max'] for x in rs]), 'data': rs}
 
         connection.commit()
-        print rs;
+        print rs
 
 
     finally:
