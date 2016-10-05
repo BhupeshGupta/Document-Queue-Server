@@ -22,3 +22,4 @@ def push_doc():
 
 if __name__ == "__main__":
     run(host="0.0.0.0", port=9005)
+app = bottle.default_app()

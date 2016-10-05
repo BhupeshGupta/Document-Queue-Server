@@ -9,6 +9,45 @@ import datetime
 import decimal
 import json
 
+import glob
+import logging
+import logging.handlers
+
+LOG_FILENAME = 'pushdoc.out'
+
+# Set up a specific logger with our desired output level
+my_logger = logging.getLogger('MyLogger')
+my_logger.setLevel(logging.DEBUG)
+
+# Add the log message handler to the logger
+handler = logging.handlers.RotatingFileHandler(LOG_FILENAME, maxBytes=1024*1024, backupCount=5)
+
+my_logger.addHandler(handler)
+
+from threading import local
+local_data = local()
+
+def p_log(msg):
+    now = datetime.datetime.now()
+
+    if not hasattr(local_data, 'start_time'):
+        local_data.start_time = now
+
+    if not hasattr(local_data, 'last_time'):
+        local_data.last_time = now
+    else:
+        local_data.last_time = local_data.now_time
+
+    local_data.now_time = now
+
+    my_logger.debug(''.join([
+        '\nLog time: ', local_data.now_time.time().__str__(),
+        '\nStart time: ',  (local_data.now_time - local_data.start_time).__str__(),
+        '\nLast time: ', (local_data.now_time - local_data.last_time).__str__(),
+        '\nMessage: ', msg
+    ]))
+
+
 config = {}
 with open('config.json', 'r') as config_file:
     config = json.loads(config_file.read())
@@ -26,7 +65,6 @@ class AlfrescoRestApi(object):
             self.url, self.user, self.password
         ))
         # TODO Check error code and raise exceptions
-        print req.status_code
         xmldoc = etree.XML(req.content)
         if xmldoc.tag == 'ticket':
             self.ticket = xmldoc.text
@@ -49,7 +87,6 @@ class AlfrescoRestApi(object):
             raise Exception('Alfresco upload returned {}'.format(req.status_code))
 
         req = req.json()
-        print req
         return req
 
     def update_properties(self, data, node_ref):
@@ -83,8 +120,11 @@ alfresco = AlfrescoRestApi(config['ALFRESCO_DB_USER'], config['ALFRESCO_DB_PASS'
 alfresco.login()
 
 
-def pushdoc(doctype, docname, link):    
-    print datetime.datetime.now().time()
+def pushdoc(doctype, docname, link):
+    raise Exception("Test Exception")
+    
+    local_data = local()
+    p_log('Enter pushdoc')
     def map_erp_doctype(doctype):
         if doctype in ('Indent Invoice', 'Excise Invoice', 'VAT Form XII'):
             return 'Indent Invoice'
@@ -130,6 +170,8 @@ def pushdoc(doctype, docname, link):
             result['receivings'].update({doctype: alfresco.get_public_link(upload['nodeRef'])})
             return json.dumps(result)
 
+    p_log('Open erp connection')
+
     erpconnection = pymysql.connect(
         host=config['ERP_DB_HOST'],
         port=config['ERP_DB_PORT'],
@@ -140,6 +182,7 @@ def pushdoc(doctype, docname, link):
 
     try:
         with erpconnection.cursor() as cursor:
+            p_log('Aquired ERP cursor')
             erp_doctype = map_erp_doctype(doctype)
             sql = """
             select *
@@ -150,6 +193,7 @@ def pushdoc(doctype, docname, link):
 
             cursor.execute(sql)
             results = cursor.fetchall()
+            p_log('GOT ERP cursor document results')
             columns = [x[0] for x in cursor.description]
             results = [{columns[index]: value for index, value in enumerate(result)} for result in results]
             for result in results:
@@ -170,13 +214,17 @@ def pushdoc(doctype, docname, link):
 
             file_path = '/tmp/{}'.format(uuid.uuid4())
             with open(file_path, 'wb') as handle:
+                p_log('Download File Start')
                 response = requests.get(link, stream=True)
 
                 for block in response.iter_content(1024):
                     handle.write(block)
+                p_log('Download File end')
 
             prefix, alfresco_model = map_alfresco(doctype)
-	    print datetime.datetime.now().time()
+
+            p_log('Upload to alfresco start')
+
             upload = alfresco.upload(
                 file_path,
                 '{}_{}.jpg'.format(docname, doctype),
@@ -186,7 +234,9 @@ def pushdoc(doctype, docname, link):
                     'containerid': config['ALFRESCO_CONTAINERID']
                 }
             )
-	    print datetime.datetime.now().time()
+            p_log('Upload to alfresco end')
+            
+            p_log('Update properties alfresco start')
             update_properties = alfresco.update_properties({
                 "properties": {
                     '{}:{}'.format(prefix, key): value for key, value in result.iteritems() if value
@@ -195,7 +245,8 @@ def pushdoc(doctype, docname, link):
                 upload['nodeRef']
 
             )
-	    print datetime.datetime.now().time()
+
+            p_log('Update properties alfresco end')
             cursor.execute('BEGIN;')
             sql = """
             update
@@ -221,4 +272,4 @@ def pushdoc(doctype, docname, link):
         raise
     finally:
         erpconnection.close()
-	print datetime.datetime.now().time()
+        p_log('Update erp database and exit')
